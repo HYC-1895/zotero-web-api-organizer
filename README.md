@@ -49,6 +49,10 @@ python zotero_web_api.py add-to-collection --item-key ITEMKEY --collection-key C
 # 从已审核的 JSON 题录预演创建；确认后才加 --apply
 python zotero_web_api.py create-items --json-file examples/items-plan.json
 python zotero_web_api.py create-items --json-file examples/items-plan.json --apply
+
+# 删除一个已确认的收藏夹；先预演，再加 --apply
+python zotero_web_api.py delete-collection --collection-key COLLECTIONKEY
+python zotero_web_api.py delete-collection --collection-key COLLECTIONKEY --apply
 ```
 
 ## 下载后即可运行：最短完整流程
@@ -112,6 +116,7 @@ python .\zotero_web_api.py add-to-collection --item-key ITEMKEY --collection-key
 | 查找云端收藏夹层级 | `list-collections` | 只读 | 直接返回 key、名称和父级 key |
 | 为条目增加一个归属 | `add-to-collection` | 输出原归属与新归属计划 | 工具会回读条目并确认归属存在 |
 | 从审核后的 JSON 创建题录 | `create-items` | 输出数量与条目类型计划 | 服务端返回每条记录的创建结果 |
+| 删除已确认的收藏夹 | `delete-collection` | 显示目标名称与待删树 | 删除后回读确认；条目仍留在文库 |
 
 这里的“增加归属”与“移动”不同：同一条文献可属于多个收藏夹。该工具不会默认移除任何既有归属，也不会删除条目、附件或收藏夹。
 
@@ -122,6 +127,13 @@ python .\zotero_web_api.py add-to-collection --item-key ITEMKEY --collection-key
 - **PDF 不是普通元数据**。本项目不下载受限内容，也不通过复制文件到 `storage` 目录制造附件；合法取得的附件上传必须另行实现官方的多阶段文件上传协议。
 - **批量操作先拆小**。建议先对 1–3 个条目完成“预演 → 确认 → 写入 → 回读”，再把同样规则推广到下一批。
 - **冲突不覆盖**。HTTP 412 表示远端已经变化；重新读取、比较差异，再决定是否重试。
+
+### 删除收藏夹的完整流程
+
+1. 运行 `list-collections`，用名称核对并取得真实 `COLLECTIONKEY`。
+2. 先执行 `delete-collection --collection-key COLLECTIONKEY`；预演会显示准确名称。若目标含有子收藏夹，预演时加 `--recursive` 才会显示完整删除树。
+3. 确认清单后，以相同参数加 `--apply`。删除树中会先处理子收藏夹，再处理父收藏夹。
+4. 工具会回读确认这些收藏夹已经不存在。文献条目不会被删除，只是不再属于已删收藏夹；需要移入回收站的条目必须另行明确确认。
 
 ## 给智能体的完整执行顺序
 
