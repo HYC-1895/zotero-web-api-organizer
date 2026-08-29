@@ -74,14 +74,17 @@ def verify(_: argparse.Namespace) -> None:
 
 def list_collections(_: argparse.Namespace) -> None:
     api = ZoteroAPI()
+    show(collection_rows(api))
+
+
+def collection_rows(api: ZoteroAPI) -> list[dict[str, Any]]:
     rows, start = [], 0
     while True:
         page, _ = api.request("GET", f"{api.library}/collections?limit=100&start={start}")
         rows.extend({"key": x.get("data", x).get("key"), "name": x.get("data", x).get("name"), "parentCollection": x.get("data", x).get("parentCollection")} for x in page)
         if len(page) < 100:
-            break
+            return rows
         start += len(page)
-    show(rows)
 
 
 def create_collection(args: argparse.Namespace) -> None:
@@ -124,6 +127,40 @@ def create_items(args: argparse.Namespace) -> None:
     show({"created": result})
 
 
+def delete_collection(args: argparse.Namespace) -> None:
+    api = ZoteroAPI()
+    rows = collection_rows(api)
+    by_key = {row["key"]: row for row in rows}
+    target = by_key.get(args.collection_key)
+    if target is None:
+        raise RuntimeError("The requested collection key was not found. Refresh the collection list and confirm the key.")
+    descendants: list[dict[str, Any]] = []
+    pending = [args.collection_key]
+    while pending:
+        parent = pending.pop()
+        children = [row for row in rows if row.get("parentCollection") == parent]
+        descendants.extend(children)
+        pending.extend(row["key"] for row in children)
+    if descendants and not args.recursive:
+        raise RuntimeError("The target has child collections. Review the dry-run with --recursive before deleting the tree.")
+    keys = [row["key"] for row in reversed(descendants)] + [args.collection_key]
+    plan = {
+        "action": "delete_collection_tree",
+        "collections": [{"key": by_key[key]["key"], "name": by_key[key]["name"]} for key in keys],
+        "items_remain_in_library": True,
+    }
+    if not args.apply:
+        show({"dry_run": True, "plan": plan})
+        return
+    for key in keys:
+        api.request("DELETE", f"{api.library}/collections/{urllib.parse.quote(key)}", version=api.library_version())
+    remaining = {row["key"] for row in collection_rows(api)}
+    missing = [key for key in keys if key in remaining]
+    if missing:
+        raise RuntimeError(f"Read-back verification found collections that remain: {missing}")
+    show({"deleted_collections": plan["collections"], "verified_absent": True, "items_remain_in_library": True})
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     commands = parser.add_subparsers(dest="command", required=True)
@@ -143,6 +180,11 @@ def main() -> int:
     items.add_argument("--json-file", required=True)
     items.add_argument("--apply", action="store_true")
     items.set_defaults(run=create_items)
+    delete_cmd = commands.add_parser("delete-collection")
+    delete_cmd.add_argument("--collection-key", required=True)
+    delete_cmd.add_argument("--recursive", action="store_true", help="Allow deletion of the selected collection and its displayed child collections.")
+    delete_cmd.add_argument("--apply", action="store_true")
+    delete_cmd.set_defaults(run=delete_collection)
     args = parser.parse_args()
     try:
         args.run(args)
