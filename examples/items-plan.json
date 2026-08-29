@@ -1,0 +1,17 @@
+[
+  {
+    "itemType": "journalArticle",
+    "title": "Example record for a user-reviewed import",
+    "creators": [
+      {
+        "creatorType": "author",
+        "firstName": "Ada",
+        "lastName": "Example"
+      }
+    ],
+    "date": "2026",
+    "DOI": "10.0000/example.doi",
+    "url": "https://example.org/record"
+  }
+]
+
