@@ -1,10 +1,10 @@
 # Zotero Web API Organizer
 
-一个以 Zotero 官方 Web API 为唯一写入通道的轻量整理工具。它适用于创建收藏夹、为已有条目添加收藏夹归属，以及导入经人工审核的题录元数据。
+一个可直接运行的 Zotero 云端资料库整理工具。它通过 Zotero 官方 Web API 创建收藏夹和子收藏夹、查询资料库层级、为已有条目增加收藏夹归属，并从人工审核的 JSON 创建题录。适合联网 AI、跨设备工作流和需要正常同步的自动化整理任务。
 
-## 为什么使用这条路线
+## 项目如何工作
 
-Zotero 的本地 SQLite 数据库是桌面端的内部缓存；外部程序直接修改它会绕过校验和同步机制。本项目通过官方 Web API 写入，由服务端生成对象键，并通过版本号和写入令牌处理并发与重试。
+本项目把整理计划发送给 Zotero Web API：服务端创建对象 key，按资料库版本检查写入，再由 Zotero 的普通同步将结果更新到各台电脑。每个写入命令都先输出预演计划，再以 `--apply` 提交；条目归类后会回读验证。
 
 ## 安全设计
 
@@ -90,6 +90,19 @@ python .\zotero_web_api.py add-to-collection --item-key ITEMKEY --collection-key
 
 `ITEMKEY` 和 `COLLECTIONKEY` 都是 Zotero 的八位内部标识，不是论文标题、DOI 或收藏夹显示名称。它们应来自 Zotero 界面、已审核的导出结果或 `list-collections` 的只读输出；不得自行编造。
 
+## 交给任意 AI 的启动说明
+
+将以下说明连同本项目目录交给 AI 即可：
+
+```text
+你正在使用 Zotero Web API Organizer。
+先向资料库所有者索取一把专用 Zotero API Key，并只在当前运行环境中作为 ZOTERO_API_KEY 使用。
+先运行 verify；再运行 list-collections 获取真实 key；任何写入先预演，再等待确认后加 --apply；每次写入后回读结果并让 Zotero 正常同步。
+不要把 API Key 输出、记录、提交或转交给其他工具。
+```
+
+除 API Key 外，AI 可以通过只读命令自行发现资料库层级；只有在要改变收藏夹、条目或元数据的具体范围时，才需要向用户确认目标。
+
 ## 本工具实际能做什么
 
 | 目标 | 命令 | 默认行为 | 写入后的验证 |
@@ -124,11 +137,11 @@ python .\zotero_web_api.py add-to-collection --item-key ITEMKEY --collection-key
 
 更完整的可复现手册见 [docs/agent-runbook.md](docs/agent-runbook.md)，可直接套用的无版权示例见 [examples/collection-plan.json](examples/collection-plan.json) 和 [examples/items-plan.json](examples/items-plan.json)。
 
-## 限制
+## 扩展工作流
 
-- PDF 附件上传需要遵循 Zotero 的多阶段文件上传协议，不能通过手改本地 `storage` 目录实现。
-- API 写入后，桌面端仍应通过 Zotero 的正常同步完成本地刷新。
-- 删除、批量移动和批量元数据覆盖应单独设计预览与确认流程；本项目有意不把这些高风险操作做成默认命令。
+- **PDF 附件**：合法取得 PDF 后，可通过 Zotero 界面保存；自动上传场景按官方多阶段文件上传协议实现。
+- **同步**：API 写入后点击 Zotero 的普通同步，确保桌面端与云端刷新一致。
+- **批量操作**：将输入整理为审核过的 JSON，先对 1–3 条记录预演和验证，再扩展到下一批。删除、移动和元数据覆盖也应使用同样的“计划 → 确认 → 回读”节奏。
 
 ## 官方资料
 
