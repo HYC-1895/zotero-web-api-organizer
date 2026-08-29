@@ -77,7 +77,44 @@ python zotero_web_api.py add-to-collection --item-key ITEMKEY --collection-key C
 | 条目或收藏夹找不到 | key 不属于该资料库或已删除 | 回到只读发现步骤，不猜测 key |
 | 桌面端没立即显示 | 本机尚未完成账户同步 | 使用 Zotero 正常同步，不改数据库 |
 
+## 5.1 从审核过的 JSON 创建题录
+
+`examples/items-plan.json` 是无版权、可直接复制的最小样例。先检查 `itemType`、题名、作者、日期与 DOI/URL 是否来自可靠来源；不得把下载到的论文正文放入 JSON 或提交到仓库。
+
+```powershell
+python zotero_web_api.py create-items --json-file examples/items-plan.json
+python zotero_web_api.py create-items --json-file examples/items-plan.json --apply
+```
+
+第一条命令仅显示记录数和条目类型。第二条才真正创建。对于新来源，先用一条记录验证题录质量和同步结果，再处理下一批。
+
 ## 6. 扩展边界
 
 批量导入题录、批量打标签、删除和附件上传都应另设“输入校验 → 预演 → 显式确认 → 回读验证”的流程。附件上传必须采用官方多阶段上传 API；禁止向桌面数据目录的 `storage` 手动复制文件来模拟上传。
+
+## 7. Windows 凭据管理器的本机用法
+
+建议把 API Key 保存为 Windows 的“通用凭据”，而不是保存在项目文件中。一个本机脚本或智能体可以在运行时读取该凭据，把值设置给当前 PowerShell 进程的 `ZOTERO_API_KEY`，运行完毕后关闭窗口即可清除该进程内的变量。
+
+操作原则：
+
+1. 凭据名称使用稳定、易识别的名称，例如 `Codex.Zotero.WebAPI`；不要把密钥放进凭据名称。
+2. 使用 `verify` 确认权限后再开始整理；不需要附件上传时，不要授予文件权限。
+3. 不要在 `echo`、日志、异常消息、截图或项目文件中输出环境变量。
+4. 发现泄露时，立即到 Zotero 的 Key 管理页面撤销该 Key，再创建新的专用 Key。
+
+## 8. 供低自主智能体执行的检查表
+
+```text
+[ ] 用户明确说明了要创建/归类的范围
+[ ] 已执行 verify，写入权限为 true
+[ ] 已通过只读命令取得真实 key，而非猜测 key
+[ ] 已运行不带 --apply 的预演，且输出与目标一致
+[ ] 每个独立变更均得到确认
+[ ] 已带 --apply 执行一次写入
+[ ] 已回读验证，并让 Zotero 正常同步
+[ ] 未输出、复制、提交或上传 API Key
+```
+
+如果任一项无法满足，智能体应停在当前步骤并说明缺失的信息；不得用本地 SQLite 直写来绕过验证或同步问题。
 
