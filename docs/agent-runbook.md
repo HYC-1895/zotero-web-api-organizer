@@ -88,6 +88,22 @@ python zotero_web_api.py create-items --json-file examples/items-plan.json --app
 
 第一条命令仅显示记录数和条目类型。第二条才真正创建。对于新来源，先用一条记录验证题录质量和同步结果，再处理下一批。
 
+## 5.2 删除收藏夹或收藏夹树
+
+删除前必须由用户确认真实 key 与名称。收藏夹删除只移除分类结构，条目仍保留在资料库。
+
+```powershell
+# 叶子收藏夹：预演后再执行
+python zotero_web_api.py delete-collection --collection-key COLLECTIONKEY
+python zotero_web_api.py delete-collection --collection-key COLLECTIONKEY --apply
+
+# 含子收藏夹的树：先查看完整清单，再显式允许递归删除
+python zotero_web_api.py delete-collection --collection-key PARENTKEY --recursive
+python zotero_web_api.py delete-collection --collection-key PARENTKEY --recursive --apply
+```
+
+预演会列出每一个待删 key 和名称；实际执行按子级到父级的顺序处理，并回读验证其均已不存在。
+
 ## 6. 扩展边界
 
 批量导入题录、批量打标签、删除和附件上传都应另设“输入校验 → 预演 → 显式确认 → 回读验证”的流程。附件上传必须采用官方多阶段上传 API；禁止向桌面数据目录的 `storage` 手动复制文件来模拟上传。
