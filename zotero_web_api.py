@@ -13,6 +13,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+from pathlib import Path
 from typing import Any
 
 
@@ -109,6 +110,20 @@ def add_to_collection(args: argparse.Namespace) -> None:
     show({"updated": result, "verified": True})
 
 
+def create_items(args: argparse.Namespace) -> None:
+    payload = json.loads(Path(args.json_file).read_text(encoding="utf-8"))
+    items = payload if isinstance(payload, list) else [payload]
+    if not all(isinstance(item, dict) and item.get("itemType") for item in items):
+        raise RuntimeError("The JSON file must contain one item object or an array of item objects with itemType.")
+    api = ZoteroAPI()
+    plan = {"create_items": {"count": len(items), "item_types": [item.get("itemType") for item in items]}}
+    if not args.apply:
+        show({"dry_run": True, "plan": plan})
+        return
+    result, _ = api.request("POST", f"{api.library}/items", items, api.library_version())
+    show({"created": result})
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     commands = parser.add_subparsers(dest="command", required=True)
@@ -124,6 +139,10 @@ def main() -> int:
     membership.add_argument("--collection-key", required=True)
     membership.add_argument("--apply", action="store_true")
     membership.set_defaults(run=add_to_collection)
+    items = commands.add_parser("create-items")
+    items.add_argument("--json-file", required=True)
+    items.add_argument("--apply", action="store_true")
+    items.set_defaults(run=create_items)
     args = parser.parse_args()
     try:
         args.run(args)
