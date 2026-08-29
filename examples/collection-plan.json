@@ -1,0 +1,20 @@
+{
+  "purpose": "无版权示例：为已有条目增加一个收藏夹归属",
+  "preconditions": [
+    "已通过 verify 确认 write_access=true",
+    "已通过 list-collections 确认两个 key",
+    "已取得用户对本次单项变更的确认"
+  ],
+  "operation": {
+    "command": "add-to-collection",
+    "item_key": "ITEMKEY",
+    "collection_key": "COLLECTIONKEY",
+    "mode": "preview-first"
+  },
+  "postconditions": [
+    "条目仍保留所有已有收藏夹归属",
+    "条目新增 COLLECTIONKEY 归属",
+    "Zotero 正常同步后桌面端可见"
+  ]
+}
+
